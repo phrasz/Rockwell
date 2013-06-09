@@ -1,0 +1,127 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="d3.js"></script>
+<style>
+
+.background {
+  fill: none;
+  pointer-events: all;
+}
+
+#states path {
+  fill: #aaa;
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+#states path:hover {
+  stroke: white;
+}
+
+</style>
+</head>
+<body>
+<script>
+
+var width = 960,
+    height = 500;
+
+var projection = d3.geo.albersUsa()
+    .scale(width)
+    .translate([width / 2, height / 2]);
+
+var path = d3.geo.path()
+    .projection(projection);
+
+var zoom = d3.behavior.zoom()
+    .translate(projection.translate())
+    .scale(projection.scale())
+    .scaleExtent([height, 8 * height])
+    .on("zoom", zoom);
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+var states = svg.append("g")
+    .attr("id", "states")
+    .call(zoom);
+
+states.append("rect")
+    .attr("class", "background")
+    .attr("width", width)
+    .attr("height", height);
+
+d3.json("us-states.json", function(json) {
+  states.selectAll("path")
+      .data(json.features)
+    .enter().append("path")
+      .attr("d", path)
+      .on("click", click);
+
+d3.csv("../databases/Rockwell_geo_stats.csv", function(data) { /*http://stackoverflow.com/questions/15769909/d3-js-plotting-points-on-zoomable-clickable-map*/
+   dataset = data.map(function(d) { return [ +d["lat_0"], +d["lon_0"] ]; });
+   console.log(data)
+   states.selectAll("circle")
+     .data(data)
+     .enter()
+     .append("circle")
+     .attr("cx", function(d) {
+               return projection([d["lon_0"], d["lat_0"] ])[0];
+               })
+     .attr("cy", function(d) {
+               return projection([d["lon_0"],d["lat_0"] ])[1];
+               })
+     .attr("r", 5)
+     .style("fill", "red");
+
+});
+
+});
+
+function click(d) {
+  var centroid = path.centroid(d),
+      translate = projection.translate();
+
+  projection.translate([
+    translate[0] - centroid[0] + width / 2,
+    translate[1] - centroid[1] + height / 2
+  ]);
+
+  zoom.translate(projection.translate());
+
+  states.selectAll("path").transition()
+      .duration(1000)
+      .attr("d", path);
+}
+
+function zoom() {
+  projection.translate(d3.event.translate).scale(d3.event.scale);
+  states.selectAll("path").attr("d", path);
+}
+
+/*
+var map = svg.append("g").attr("class", "map");
+var projection = d3.geo.albers()
+    .origin([3.4,46.8])
+    .scale(12000)
+    .translate([590, 570]);
+var path = d3.geo.path().projection(projection);
+d3.json('myjsonfile.json', function(json) {
+    map.selectAll('path')
+        .data(json.features)
+      .enter().append('path').attr('d', path);
+    // now use the projection to project your coords
+    var coordinates = projection([mylon, mylat]);
+    map.append('svg:circle')
+        .attr('cx', coordinates[0])
+        .attr('cy', coordinates[1])
+        .attr('r', 5);
+});
+*/
+</script>
+</body>
+</html>
